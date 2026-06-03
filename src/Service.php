@@ -13,7 +13,7 @@ class Service
             $param    = $type === 'ruc' ? 'ruc' : 'dni';
             $response = self::baseRequest()
                 ->post(config('esolutions.apiperudev.url') . '/' . $type, [$param => $number]);
-            return $response->json();
+            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
@@ -24,7 +24,7 @@ class Service
         try {
             $response = self::baseRequest()
                 ->post(config('esolutions.apiperudev.url') . '/tipo-de-cambio', ['fecha' => $date]);
-            return $response->json();
+            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
