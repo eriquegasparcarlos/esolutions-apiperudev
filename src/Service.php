@@ -12,7 +12,7 @@ class Service
         try {
             $param    = $type === 'ruc' ? 'ruc' : 'dni';
             $response = self::baseRequest()
-                ->post(self::url() . '/api/' . $type, [$param => $number]);
+                ->post(self::url() . '/' . $type, [$param => $number]);
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
@@ -23,7 +23,7 @@ class Service
     {
         try {
             $response = self::baseRequest()
-                ->post(self::url() . '/api/tipo_de_cambio', ['fecha' => $date]);
+                ->post(self::url() . '/tipo_de_cambio', ['fecha' => $date]);
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
@@ -34,7 +34,7 @@ class Service
     {
         try {
             $response = self::baseRequest()
-                ->post(self::url() . '/api/ruc_domicilio_fiscal', ['ruc' => $number]);
+                ->post(self::url() . '/ruc_domicilio_fiscal', ['ruc' => $number]);
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
@@ -45,7 +45,7 @@ class Service
     {
         try {
             $response = self::baseRequest()
-                ->post(self::url() . '/api/ruc_establecimientos_anexos', ['ruc' => $number]);
+                ->post(self::url() . '/ruc_establecimientos_anexos', ['ruc' => $number]);
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
@@ -56,7 +56,7 @@ class Service
     {
         try {
             $response = self::baseRequest()
-                ->post(self::url() . '/api/puertos');
+                ->post(self::url() . '/puertos');
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
@@ -67,7 +67,7 @@ class Service
     {
         try {
             $response = self::baseRequest()
-                ->post(self::url() . '/api/aeropuertos');
+                ->post(self::url() . '/aeropuertos');
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
@@ -84,13 +84,13 @@ class Service
     ): array {
         try {
             $response = self::baseRequest()
-                ->post(self::url() . '/api/cpe', [
-                    'ruc_emisor'              => $companyNumber,
-                    'codigo_tipo_documento'   => $documentTypeId,
-                    'serie_documento'         => $series,
-                    'numero_documento'        => $number,
-                    'fecha_de_emision'        => $dateOfIssue,
-                    'total'                   => $total,
+                ->post(self::url() . '/cpe', [
+                    'ruc_emisor'            => $companyNumber,
+                    'codigo_tipo_documento' => $documentTypeId,
+                    'serie_documento'       => $series,
+                    'numero_documento'      => $number,
+                    'fecha_de_emision'      => $dateOfIssue,
+                    'total'                 => $total,
                 ]);
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
@@ -102,9 +102,9 @@ class Service
     {
         try {
             $response = self::baseRequest()
-                ->post(self::url() . '/api/validacion_multiple_cpe', [
-                    'ruc_emisor'    => $rucEmisor,
-                    'comprobantes'  => $comprobantes,
+                ->post(self::url() . '/validacion_multiple_cpe', [
+                    'ruc_emisor'   => $rucEmisor,
+                    'comprobantes' => $comprobantes,
                 ]);
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
@@ -120,14 +120,7 @@ class Service
         string $dateOfIssue,
         float  $total
     ): string {
-        return implode('|', [
-            $companyNumber,
-            $documentTypeId,
-            $series,
-            $number,
-            $dateOfIssue,
-            $total,
-        ]);
+        return implode('|', [$companyNumber, $documentTypeId, $series, $number, $dateOfIssue, $total]);
     }
 
     public function searchRuc(\Illuminate\Http\Request $request): array
