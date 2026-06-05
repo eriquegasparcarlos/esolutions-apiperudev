@@ -12,7 +12,7 @@ class Service
         try {
             $param    = $type === 'ruc' ? 'ruc' : 'dni';
             $response = self::baseRequest()
-                ->post(config('esolutions.apiperudev.url') . '/' . $type, [$param => $number]);
+                ->post(self::url() . '/' . $type, [$param => $number]);
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
@@ -23,11 +23,111 @@ class Service
     {
         try {
             $response = self::baseRequest()
-                ->post(config('esolutions.apiperudev.url') . '/tipo-de-cambio', ['fecha' => $date]);
+                ->post(self::url() . '/tipo-de-cambio', ['fecha' => $date]);
             return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
         } catch (Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    public static function searchFiscalAddress(string $number): array
+    {
+        try {
+            $response = self::baseRequest()
+                ->post(self::url() . '/ruc-domicilio-fiscal', ['ruc' => $number]);
+            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public static function searchEstablishments(string $number): array
+    {
+        try {
+            $response = self::baseRequest()
+                ->post(self::url() . '/ruc-establecimientos', ['ruc' => $number]);
+            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public static function searchPorts(): array
+    {
+        try {
+            $response = self::baseRequest()
+                ->post(self::url() . '/puertos');
+            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public static function searchAirports(): array
+    {
+        try {
+            $response = self::baseRequest()
+                ->post(self::url() . '/aeropuertos');
+            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public static function searchCpeWithInput(
+        string $companyNumber,
+        string $documentTypeId,
+        string $series,
+        string $number,
+        string $dateOfIssue,
+        float  $total
+    ): array {
+        try {
+            $response = self::baseRequest()
+                ->post(self::url() . '/cpe', [
+                    'ruc_emisor'              => $companyNumber,
+                    'codigo_tipo_documento'   => $documentTypeId,
+                    'serie_documento'         => $series,
+                    'numero_documento'        => $number,
+                    'fecha_de_emision'        => $dateOfIssue,
+                    'total'                   => $total,
+                ]);
+            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public static function searchCpeMultiple(array $comprobantes, string $rucEmisor): array
+    {
+        try {
+            $response = self::baseRequest()
+                ->post(self::url() . '/cpe-multiple', [
+                    'ruc_emisor'    => $rucEmisor,
+                    'comprobantes'  => $comprobantes,
+                ]);
+            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public static function buildCpeString(
+        string $companyNumber,
+        string $documentTypeId,
+        string $series,
+        string $number,
+        string $dateOfIssue,
+        float  $total
+    ): string {
+        return implode('|', [
+            $companyNumber,
+            $documentTypeId,
+            $series,
+            $number,
+            $dateOfIssue,
+            $total,
+        ]);
     }
 
     public function searchRuc(\Illuminate\Http\Request $request): array
@@ -38,6 +138,11 @@ class Service
     public function searchDni(\Illuminate\Http\Request $request): array
     {
         return self::searchWithInput('dni', $request->input('number', ''));
+    }
+
+    private static function url(): string
+    {
+        return rtrim(config('esolutions.apiperudev.url', ''), '/');
     }
 
     private static function baseRequest(): \Illuminate\Http\Client\PendingRequest
