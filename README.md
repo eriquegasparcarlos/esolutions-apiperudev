@@ -9,10 +9,6 @@ Consulta datos de RUC, DNI y tipo de cambio en tiempo real.
 composer require esolutions/apiperudev
 ```
 
-```bash
-composer require esolutions/apiperudev
-```
-
 ## Namespace
 
 ```
