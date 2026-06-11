@@ -5,13 +5,8 @@ Consulta datos de RUC, DNI y tipo de cambio en tiempo real.
 
 ## Instalación
 
-```json
-"repositories": [
-    { "type": "vcs", "url": "https://github.com/eriquegasparcarlos/esolutions-apiperudev" }
-],
-"require": {
-    "esolutions/apiperudev": "^1.0"
-}
+```bash
+composer require esolutions/apiperudev
 ```
 
 ```bash
