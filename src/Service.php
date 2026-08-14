@@ -2,151 +2,111 @@
 
 namespace Esolutions\ApiPeruDev;
 
-use Illuminate\Support\Facades\Http;
-use Throwable;
-
+/**
+ * Facade estática (compatibilidad con la versión anterior del paquete).
+ *
+ * La URL de la API está fija en el paquete (Client::BASE_URL); solo el token es configurable.
+ * Resuelve el token desde config('esolutions.apiperudev.token') mediante un Client por defecto.
+ * Para inyectar el token en runtime (ej. guardado en BD), usá Client directamente, o
+ * registrá un Client configurado con Service::using().
+ */
 class Service
 {
-    public static function searchWithInput(string $type, string $number): array
+    /** @var Client|null */
+    private static $default = null;
+
+    /** @return Client */
+    public static function client()
     {
-        try {
-            $param    = $type === 'ruc' ? 'ruc' : 'dni';
-            $response = self::baseRequest()
-                ->post(self::url() . '/' . $type, [$param => $number]);
-            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
+        if (self::$default === null) {
+            self::$default = new Client();
         }
+        return self::$default;
     }
 
-    public static function searchExchangeRateSaleWithInput(string $date): array
+    /** Fija el Client por defecto (ej. con token inyectado desde BD). @return void */
+    public static function using(Client $client)
     {
-        try {
-            $response = self::baseRequest()
-                ->post(self::url() . '/tipo_de_cambio', ['fecha' => $date]);
-            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        self::$default = $client;
     }
 
-    public static function searchFiscalAddress(string $number): array
+    // ======= Compatibilidad con la versión anterior (mismas firmas) =======
+
+    public static function searchWithInput($type, $number)
     {
-        try {
-            $response = self::baseRequest()
-                ->post(self::url() . '/ruc_domicilio_fiscal', ['ruc' => $number]);
-            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        return $type === 'ruc' ? self::client()->ruc($number) : self::client()->dni($number);
     }
 
-    public static function searchEstablishments(string $number): array
+    public static function searchExchangeRateSaleWithInput($date)
     {
-        try {
-            $response = self::baseRequest()
-                ->post(self::url() . '/ruc_establecimientos_anexos', ['ruc' => $number]);
-            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        return self::client()->tipoDeCambio($date);
     }
 
-    public static function searchPorts(): array
+    public static function searchFiscalAddress($number)
     {
-        try {
-            $response = self::baseRequest()
-                ->post(self::url() . '/puertos');
-            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        return self::client()->rucDomicilioFiscal($number);
     }
 
-    public static function searchAirports(): array
+    public static function searchEstablishments($number)
     {
-        try {
-            $response = self::baseRequest()
-                ->post(self::url() . '/aeropuertos');
-            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        return self::client()->rucEstablecimientosAnexos($number);
     }
 
-    public static function searchCpeWithInput(
-        string $companyNumber,
-        string $documentTypeId,
-        string $series,
-        string $number,
-        string $dateOfIssue,
-        float  $total
-    ): array {
-        try {
-            $response = self::baseRequest()
-                ->post(self::url() . '/cpe', [
-                    'ruc_emisor'            => $companyNumber,
-                    'codigo_tipo_documento' => $documentTypeId,
-                    'serie_documento'       => $series,
-                    'numero_documento'      => $number,
-                    'fecha_de_emision'      => $dateOfIssue,
-                    'total'                 => $total,
-                ]);
-            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-
-    public static function searchCpeMultiple(array $comprobantes, string $rucEmisor): array
+    public static function searchPorts()
     {
-        try {
-            $response = self::baseRequest()
-                ->post(self::url() . '/validacion_multiple_cpe', [
-                    'ruc_emisor'   => $rucEmisor,
-                    'comprobantes' => $comprobantes,
-                ]);
-            return $response->json() ?? ['success' => false, 'message' => 'La API no devolvió una respuesta válida.'];
-        } catch (Throwable $e) {
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
+        return self::client()->puertos();
     }
 
-    public static function buildCpeString(
-        string $companyNumber,
-        string $documentTypeId,
-        string $series,
-        string $number,
-        string $dateOfIssue,
-        float  $total
-    ): string {
-        return implode('|', [$companyNumber, $documentTypeId, $series, $number, $dateOfIssue, $total]);
+    public static function searchAirports()
+    {
+        return self::client()->aeropuertos();
     }
 
-    public function searchRuc(\Illuminate\Http\Request $request): array
+    public static function searchCpeWithInput($companyNumber, $documentTypeId, $series, $number, $dateOfIssue, $total)
+    {
+        return self::client()->cpe($companyNumber, $documentTypeId, $series, $number, $dateOfIssue, $total);
+    }
+
+    public static function searchCpeMultiple(array $comprobantes, $rucEmisor)
+    {
+        return self::client()->validacionMultipleCpe($comprobantes, $rucEmisor);
+    }
+
+    public static function searchMassiveCpe(array $data)
+    {
+        return self::client()->validacionMultipleCpeRaw($data);
+    }
+
+    public static function buildCpeString($companyNumber, $documentTypeId, $series, $number, $dateOfIssue, $total)
+    {
+        return Client::buildCpeString($companyNumber, $documentTypeId, $series, $number, $dateOfIssue, $total);
+    }
+
+    /** @param mixed $request objeto con ->input('number') (Laravel Request). */
+    public function searchRuc($request)
     {
         return self::searchWithInput('ruc', $request->input('number', ''));
     }
 
-    public function searchDni(\Illuminate\Http\Request $request): array
+    /** @param mixed $request objeto con ->input('number') (Laravel Request). */
+    public function searchDni($request)
     {
         return self::searchWithInput('dni', $request->input('number', ''));
     }
 
-    private static function url(): string
-    {
-        return rtrim(config('esolutions.apiperudev.url', ''), '/');
-    }
+    // ======= Nuevos endpoints (docs.apiperu.dev) =======
 
-    private static function baseRequest(): \Illuminate\Http\Client\PendingRequest
-    {
-        return Http::withOptions(['verify' => false])
-            ->withToken(config('esolutions.apiperudev.token'))
-            ->withHeaders([
-                'x-app-version' => config('version.version', ''),
-                'x-app-build'   => config('version.build', ''),
-            ])
-            ->connectTimeout(5)
-            ->timeout(10);
-    }
+    public static function ruc($ruc) { return self::client()->ruc($ruc); }
+    public static function dni($dni) { return self::client()->dni($dni); }
+    public static function dniRuc($dni) { return self::client()->dniRuc($dni); }
+    public static function rucSunat($ruc) { return self::client()->rucSunat($ruc); }
+    public static function rucRepresentantes($ruc) { return self::client()->rucRepresentantes($ruc); }
+    public static function rucTrabajadores($ruc) { return self::client()->rucTrabajadores($ruc); }
+    public static function rucDeudaCoactiva($ruc) { return self::client()->rucDeudaCoactiva($ruc); }
+    public static function rucContacto($ruc) { return self::client()->rucContacto($ruc); }
+    public static function rucSsco($ruc) { return self::client()->rucSsco($ruc); }
+    public static function placa($placa) { return self::client()->placa($placa); }
+    public static function licenciaConducir($numLicencia) { return self::client()->licenciaConducir($numLicencia); }
+    public static function comisionesAfp($periodo) { return self::client()->comisionesAfp($periodo); }
+    public static function ubigeos() { return self::client()->ubigeos(); }
 }
