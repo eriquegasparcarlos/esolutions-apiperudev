@@ -1,5 +1,18 @@
 # Changelog
 
+## [v1.2.0] - 2026-10-01
+### Added
+- Soporte **multi-instancia por lista blanca**: `Client::apiConsulta($token)` / `Client::apiPeru($token)`,
+  constantes `Client::APIPERU` / `Client::APICONSULTA`, tercer parámetro `$instancia` en el constructor
+  y en `make()`, y config `esolutions.apiperudev.instancia` (env `APIPERUDEV_INSTANCIA`).
+### Security
+- La URL base **ya no es inyectable como texto libre**. Se elige una instancia de una lista blanca
+  interna; un valor desconocido (o una URL) lanza `InvalidArgumentException`. Evita que el token
+  Bearer pueda enviarse a un host no controlado.
+### Changed
+- La constante `Client::BASE_URL` se reemplazó por el mapa interno `$BASES` + resolución por instancia.
+  **Backward-compatible**: `new Client($token)` sigue apuntando a apiperu.dev por defecto.
+
 ## [v1.0.2] - 2026-06-11
 ### Fixed
 - Removed hardcoded `"version"` field from `composer.json` (caused Packagist to skip tags)

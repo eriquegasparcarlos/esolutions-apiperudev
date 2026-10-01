@@ -6,11 +6,13 @@ use GuzzleHttp\Client as HttpClient;
 use Throwable;
 
 /**
- * Cliente universal para la API de apiperu.dev (RUC/DNI, SUNAT, CPE, etc.).
+ * Cliente universal para la API de apiperu.dev / apiconsulta.dev (RUC/DNI, SUNAT, CPE, etc.).
  *
- * La URL base está FIJA en el paquete (const BASE_URL) a propósito: no es inyectable ni
- * configurable, para que el paquete solo funcione contra la infraestructura de apiperu.dev.
- * Lo único configurable es el token (Bearer).
+ * La URL base NO es texto libre inyectable: se elige entre una LISTA BLANCA de instancias
+ * (Client::APIPERU / Client::APICONSULTA) que el paquete resuelve internamente. Una instancia
+ * desconocida (o una URL) lanza InvalidArgumentException. Así el token NUNCA puede terminar
+ * enviándose a un host no controlado (p. ej. de la competencia o un servidor que lo robe).
+ * Configurable: el token (Bearer) y la instancia (default apiperu).
  *
  * Universal:
  *  - PHP 7.2+ y Laravel 5.7 a 13 (y standalone, sin Laravel).
@@ -21,13 +23,32 @@ use Throwable;
  *  1) Inyección:  new Client('API_TOKEN')
  *  2) Fallback a config Laravel: config('esolutions.apiperudev.token') (si config() existe).
  *
+ * Instancia (por orden de prioridad):
+ *  1) Inyección:  Client::apiConsulta($token)  ó  new Client($token, [], Client::APICONSULTA)
+ *  2) Fallback a config Laravel: config('esolutions.apiperudev.instancia') (si config() existe).
+ *  3) Default: Client::APIPERU (apiperu.dev).
+ *
  * Todos los métodos devuelven un array (respuesta de la API) o
  * ['success' => false, 'message' => '...'] ante error de red/decodificación.
  */
 class Client
 {
-    /** URL base FIJA de la API (no configurable a propósito). */
-    const BASE_URL = 'https://api.apiperu.dev';
+    /**
+     * Instancias de API VÁLIDAS (lista blanca). El consumidor elige UNA de estas; NO puede
+     * inyectar una URL arbitraria. Para habilitar una instancia nueva (un white-label propio),
+     * se agrega al mapa self::$BASES y se publica una versión del paquete.
+     */
+    const APIPERU     = 'apiperu';
+    const APICONSULTA = 'apiconsulta';
+
+    /** Mapa CERRADO instancia → URL base. No se expone ni se sobrescribe desde afuera. */
+    private static $BASES = array(
+        'apiperu'     => 'https://api.apiperu.dev',
+        'apiconsulta' => 'https://api.apiconsulta.dev',
+    );
+
+    /** @var string URL base resuelta desde la instancia (lista blanca). */
+    private $baseUrl;
 
     /** @var string */
     private $token;
@@ -42,20 +63,57 @@ class Client
     private $http = null;
 
     /**
-     * @param string|null $token  Bearer token. Si es null, usa config('esolutions.apiperudev.token').
-     * @param array       $meta   ['version' => '', 'build' => ''] para cabeceras x-app-*.
+     * @param string|null $token      Bearer token. Si es null, usa config('esolutions.apiperudev.token').
+     * @param array       $meta       ['version' => '', 'build' => ''] para cabeceras x-app-*.
+     * @param string|null $instancia  Client::APIPERU (default) o Client::APICONSULTA. Si es null, usa
+     *                                config('esolutions.apiperudev.instancia') y, si no, APIPERU.
+     *                                NO acepta URLs: una instancia desconocida lanza InvalidArgumentException.
      */
-    public function __construct($token = null, array $meta = array())
+    public function __construct($token = null, array $meta = array(), $instancia = null)
     {
         $this->token      = $token !== null ? $token : self::cfg('esolutions.apiperudev.token', '');
         $this->appVersion = isset($meta['version']) ? $meta['version'] : self::cfg('version.version', '');
         $this->appBuild   = isset($meta['build']) ? $meta['build'] : self::cfg('version.build', '');
+
+        $instancia = $instancia !== null ? $instancia : self::cfg('esolutions.apiperudev.instancia', self::APIPERU);
+        $this->baseUrl = self::resolveBaseUrl($instancia);
     }
 
     /** @return self */
-    public static function make($token = null, array $meta = array())
+    public static function make($token = null, array $meta = array(), $instancia = null)
     {
-        return new self($token, $meta);
+        return new self($token, $meta, $instancia);
+    }
+
+    /** Cliente apuntando a apiperu.dev (instancia por defecto). @return self */
+    public static function apiPeru($token = null, array $meta = array())
+    {
+        return new self($token, $meta, self::APIPERU);
+    }
+
+    /** Cliente apuntando a apiconsulta.dev. @return self */
+    public static function apiConsulta($token = null, array $meta = array())
+    {
+        return new self($token, $meta, self::APICONSULTA);
+    }
+
+    /**
+     * Resuelve la URL base desde la instancia (lista blanca). Rechaza cualquier valor que
+     * no esté en self::$BASES (incluida una URL) para que el paquete solo pueda hablar con
+     * infraestructura propia y el token nunca viaje a un host no controlado.
+     * @param string $instancia
+     * @return string
+     */
+    private static function resolveBaseUrl($instancia)
+    {
+        $key = is_string($instancia) ? strtolower(trim($instancia)) : '';
+        if (!isset(self::$BASES[$key])) {
+            $shown = is_string($instancia) ? $instancia : gettype($instancia);
+            throw new \InvalidArgumentException(
+                "Instancia de API no válida: '" . $shown . "'. Usá Client::APIPERU o Client::APICONSULTA."
+            );
+        }
+        return self::$BASES[$key];
     }
 
     /** @return $this */
@@ -268,7 +326,7 @@ class Client
             if (!empty($body)) {
                 $options['json'] = $body;
             }
-            $response = $this->client()->request('POST', self::BASE_URL . $path, $options);
+            $response = $this->client()->request('POST', $this->baseUrl . $path, $options);
             $decoded  = json_decode((string) $response->getBody(), true);
             if (is_array($decoded)) {
                 return $decoded;

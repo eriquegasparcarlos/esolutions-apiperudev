@@ -6,9 +6,10 @@ Cliente HTTP **universal** para la API de [apiperu.dev](https://apiperu.dev)
 
 - **Universal**: PHP **7.2+** y Laravel **5.7 → 13**, o **standalone** (sin Laravel).
 - Usa **Guzzle** directamente (no el HTTP client de Illuminate, que exige Laravel 7+).
-- **URL fija** dentro del paquete (`Client::BASE_URL = https://api.apiperu.dev`): no configurable
-  ni inyectable — el paquete solo funciona contra la infraestructura de apiperu.dev.
-- Lo único configurable es el **token** (Bearer), por inyección o `config('esolutions.apiperudev.token')`.
+- **Instancia por lista blanca**, no URL libre: se elige `Client::APIPERU` (default) o
+  `Client::APICONSULTA` y el paquete resuelve la URL internamente. Una instancia desconocida
+  (o una URL) lanza `InvalidArgumentException` — así el token nunca viaja a un host no controlado.
+- Configurable: el **token** (Bearer) y la **instancia**, por inyección o `config('esolutions.apiperudev.*')`.
 - Todos los métodos devuelven `array` (respuesta de la API) o `['success' => false, 'message' => ...]`.
 
 Auth: header `Authorization: Bearer <token>`.
@@ -60,6 +61,31 @@ require 'vendor/autoload.php';
 $api = new \Esolutions\ApiPeruDev\Client('tu_token');
 $api->dni('12345678');
 ```
+
+### Elegir instancia (apiperu.dev / apiconsulta.dev)
+
+Por defecto apunta a **apiperu.dev**. Para **apiconsulta.dev**:
+
+```php
+use Esolutions\ApiPeruDev\Client;
+
+$api = Client::apiConsulta($token);   // apiconsulta.dev
+$api = Client::apiPeru($token);       // apiperu.dev (= default)
+
+// equivalente por constructor:
+$api = new Client($token, [], Client::APICONSULTA);
+```
+
+En Laravel, por env/config (sin tocar código):
+
+```dotenv
+APIPERUDEV_INSTANCIA=apiconsulta   # 'apiperu' (default) | 'apiconsulta'
+```
+
+> La instancia es una **clave de lista blanca**, no una URL. Un valor fuera de la lista
+> lanza `InvalidArgumentException`. Para habilitar un white-label propio nuevo, se agrega
+> al paquete y se publica una versión. El token de cada instancia es el suyo (bases de
+> datos y usuarios separados): usá el token de la instancia a la que apuntás.
 
 ## Endpoints
 

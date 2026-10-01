@@ -5,10 +5,11 @@ namespace Esolutions\ApiPeruDev;
 /**
  * Facade estática (compatibilidad con la versión anterior del paquete).
  *
- * La URL de la API está fija en el paquete (Client::BASE_URL); solo el token es configurable.
- * Resuelve el token desde config('esolutions.apiperudev.token') mediante un Client por defecto.
- * Para inyectar el token en runtime (ej. guardado en BD), usá Client directamente, o
- * registrá un Client configurado con Service::using().
+ * La URL sale de la INSTANCIA elegida (lista blanca del paquete), no de un texto libre.
+ * El Client por defecto resuelve token e instancia desde config('esolutions.apiperudev.*')
+ * → por defecto apiperu.dev. Para apuntar a otra instancia (o inyectar el token en runtime,
+ * ej. guardado en BD), registrá un Client configurado:
+ *     Service::using(\Esolutions\ApiPeruDev\Client::apiConsulta($tokenDeBd));
  */
 class Service
 {
